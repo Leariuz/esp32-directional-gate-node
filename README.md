@@ -1,55 +1,82 @@
-ESP32 Bidirectional Zone Tracking Node
+🚪 ESP32 Bidirectional Zone Tracking Node
 
-A modular ESP32-based bidirectional infrared gate sensor that detects movement direction and maintains real-time zone occupancy. Designed as a reusable boundary node for warehouse-style tracking systems.
+A modular ESP32-based infrared gate sensor for directional movement detection and real-time zone occupancy tracking.
 
-Overview
+Designed as a reusable edge device for warehouse flow tracking, dock monitoring, and boundary-based inventory systems.
 
-This project implements a two-beam infrared break-beam system using an ESP32 to:
+📦 What This Project Does
 
-Detect beam interruptions
+This system uses two IR break-beam sensors and an ESP32 to:
 
-Determine direction of movement (A→B or B→A)
+✅ Detect beam interruptions
 
-Prevent multi-trigger chatter
+✅ Determine direction of movement (A → B or B → A)
 
-Emit structured JSON events
+✅ Eliminate multi-trigger chatter
 
-Maintain zone occupancy count
+✅ Emit structured JSON events
 
-The node acts as a boundary event sensor that can be integrated into larger inventory or flow-tracking systems.
+✅ Maintain live zone occupancy count
 
-Features
+The node acts as a boundary event sensor that can plug into dashboards, backend services, or IoT systems.
 
-Dual IR beam direction detection
+🧠 System Architecture
 
-Debounced digital filtering
+The design follows a clean, layered structure:
 
-Finite State Machine (FSM) logic
+1️⃣ Beam Filtering Layer
 
-Sequence timeout protection
+GPIO input with INPUT_PULLUP
 
-Restore-to-rearm locking
+Software debounce timing
+
+Stable-state validation
+
+2️⃣ Direction Detection Layer
+
+Finite State Machine (FSM):
+
+Idle → AFirst → Locked
+Idle → BFirst → Locked
+
+Direction logic:
+
+Beam Order	Direction
+A → B	A2B
+B → A	B2A
+
+Protection mechanisms:
+
+Debounce window
+
+Sequence timeout
+
+Restore-to-rearm lock state
+
+Occupancy clamping (no negative values)
+
+3️⃣ Event & Zone Layer
 
 Structured JSON output
 
+Event sequence counter
+
 Zone occupancy tracking
 
-UI-ready event stream
-
-Hardware Requirements
+🔌 Hardware Requirements
 
 ESP32 Dev Board (ESP-WROOM-32 compatible)
 
-2x IR Break-Beam Sensors
+2× IR Break-Beam Sensors
 
 Jumper wires
 
 USB cable
 
-Wiring
+🧩 Wiring
 Beam A
 
-VCC → VIN (5V) or 3V3 (depending on module)
+VCC → VIN (5V) or 3V3 (module dependent)
 
 GND → GND
 
@@ -63,86 +90,35 @@ GND → GND
 
 OUT → GPIO 16
 
-Ensure both beams are aligned and intact during boot.
+⚠ Important:
 
-Direction Logic
+Both beams must be aligned and intact during boot.
 
-Movement is determined by beam break sequence:
+All grounds must be common.
 
-Sequence	Direction
-A → B	A2B
-B → A	B2A
+🔄 Direction Mapping
 
-Mapping used in this project:
+Current configuration:
 
-B2A = Enter Zone A
+B2A → Enter Zone A
 
-A2B = Exit Zone A
+A2B → Exit Zone A
 
-Event Output Format
+Mapping can be modified depending on physical installation.
 
-All output is newline-delimited JSON (NDJSON).
+📡 Output Format (NDJSON)
 
-Pass Event
+Each event is printed as newline-delimited JSON.
+
+▶ Pass Event
 {"v":1,"node":"door_01","type":"pass","dir":"B2A","ms":128100,"seq":59}
-
-Fields:
-
-v – Protocol version
-
-node – Node identifier
-
-type – Event type
-
-dir – Direction
-
-ms – Milliseconds since boot
-
-seq – Event counter
-
-Zone State Update
-{"v":1,"node":"door_01","type":"zone","zone":"A","occ":5,"ms":128105,"seq":59}
-
-Fields:
-
-zone – Logical zone ID
-
-occ – Current occupancy count
-
-State Machine Design
-
-States:
-
-Idle
-
-AFirst
-
-BFirst
-
-Locked
-
-Protections:
-
-Debounce window (25ms)
-
-Sequence timeout (900ms)
-
-Restore-stable window (120ms)
-
-Occupancy clamping (no negative values)
-
-This ensures:
-
-No chatter spam
-
-No double-trigger events
-
-Deterministic direction detection
-
-Tuning Parameters
-constexpr uint32_t DEBOUNCE_MS = 25;
-constexpr uint32_t SEQ_TIMEOUT_MS = 900;
-constexpr uint32_t RESTORE_STABLE_MS = 120;
+Field	Description
+v	Protocol version
+node	Device identifier
+type	Event type
+dir	Direction
+ms	Milliseconds since boot
+seq	Monotonic event counter
 
 Adjust based on:
 
@@ -150,35 +126,19 @@ Beam spacing
 
 Movement speed
 
-Environment lighting conditions
+Environmental lighting
 
-Project Structure
+Object size
 
-Single-file modular implementation with logical separation:
+🛡 Behavior Guarantees
 
-Beam filtering
+✔ One event per full crossing
+✔ No chatter-induced double triggers
+✔ No repeated triggers while object remains in beam
+✔ Deterministic direction detection
+✔ Occupancy never drops below zero
 
-Direction state machine
-
-Event emission
-
-Zone tracking
-
-Designed to allow future transport replacement (Serial → MQTT / BLE) without changing detection logic.
-
-Future Improvements
-
-WiFi + MQTT publishing
-
-BLE-based pallet identification
-
-Persistent occupancy storage (NVS)
-
-Multi-node synchronization
-
-Central dashboard integration
-
-Use Cases
+🏭 Example Use Cases
 
 Warehouse dock monitoring
 
@@ -188,8 +148,30 @@ Forklift traffic counting
 
 Entry/exit monitoring
 
-Industrial boundary sensing
+Industrial automation prototypes
 
-License
+⚠ Limitations
 
-MIT License (or specify your preferred license)
+Occupancy count resets on reboot (non-persistent)
+
+No object identity tracking (RFID/BLE not included)
+
+Assumes all traffic passes through monitored gate
+
+🚀 Future Improvements
+
+WiFi + MQTT transport
+
+BLE tag association
+
+Persistent occupancy storage (NVS)
+
+Multi-node synchronization
+
+OTA firmware updates
+
+Real-time dashboard integration
+
+📜 License
+
+MIT
