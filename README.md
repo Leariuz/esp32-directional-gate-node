@@ -1,168 +1,152 @@
-🚪 ESP32 Bidirectional Zone Tracking Node
+# ESP32 Bidirectional Zone Tracking Node
 
-A modular ESP32-based infrared gate sensor for directional movement detection and real-time zone occupancy tracking.
+## Overview
 
-Designed as a reusable edge device for warehouse flow tracking, dock monitoring, and boundary-based inventory systems.
+This project implements a bidirectional infrared gate sensor using an ESP32. The system detects directional movement across a boundary and maintains a real-time zone occupancy count.
 
-📦 What This Project Does
+The node functions as a modular boundary event device suitable for warehouse flow monitoring, dock tracking, and industrial boundary sensing applications.
 
-This system uses two IR break-beam sensors and an ESP32 to:
+---
 
-✅ Detect beam interruptions
+## System Architecture
 
-✅ Determine direction of movement (A → B or B → A)
+                +---------------------------+
+                |        Zone A             |
+                |    (Tracked Occupancy)    |
+                +-------------^-------------+
+                              |
+                              |  B2A = Enter
+                              |  A2B = Exit
+                              |
+    Beam A             Beam B
+ +----------+       +----------+
+ | IR RX/TX |       | IR RX/TX |
+ +-----+----+       +----+-----+
+       |                  |
+       | GPIO 4           | GPIO 16
+       |                  |
+ +----------------------------------+
+ |            ESP32 Node            |
+ |----------------------------------|
+ |  Beam Filtering (Debounce)       |
+ |  Direction State Machine (FSM)   |
+ |  Zone Occupancy Logic            |
+ |  JSON Event Emission             |
+ +----------------------------------+
+                |
+                | Serial / Future MQTT / BLE
+                v
+        +------------------+
+        | UI / Backend     |
+        | Dashboard        |
+        +------------------+
 
-✅ Eliminate multi-trigger chatter
+        
+---
 
-✅ Emit structured JSON events
+## Objectives
 
-✅ Maintain live zone occupancy count
+- Detect beam interruption events
+- Determine direction of movement (A→B or B→A)
+- Eliminate multi-trigger chatter
+- Emit structured JSON event output
+- Maintain zone occupancy state
+- Provide UI-ready event stream architecture
 
-The node acts as a boundary event sensor that can plug into dashboards, backend services, or IoT systems.
+---
 
-🧠 System Architecture
+## Hardware Requirements
 
-The design follows a clean, layered structure:
+- ESP32 Dev Board (ESP-WROOM-32 compatible)
+- Two IR break-beam sensor modules
+- Jumper wires
+- USB power and programming cable
 
-1️⃣ Beam Filtering Layer
+---
 
-GPIO input with INPUT_PULLUP
+## Wiring
 
-Software debounce timing
+### Beam A
+- VCC → VIN (5V) or 3V3 (module dependent)
+- GND → GND
+- OUT → GPIO 4
 
-Stable-state validation
-
-2️⃣ Direction Detection Layer
-
-Finite State Machine (FSM):
-
-Idle → AFirst → Locked
-Idle → BFirst → Locked
-
-Direction logic:
-
-Beam Order	Direction
-A → B	A2B
-B → A	B2A
-
-Protection mechanisms:
-
-Debounce window
-
-Sequence timeout
-
-Restore-to-rearm lock state
-
-Occupancy clamping (no negative values)
-
-3️⃣ Event & Zone Layer
-
-Structured JSON output
-
-Event sequence counter
-
-Zone occupancy tracking
-
-🔌 Hardware Requirements
-
-ESP32 Dev Board (ESP-WROOM-32 compatible)
-
-2× IR Break-Beam Sensors
-
-Jumper wires
-
-USB cable
-
-🧩 Wiring
-Beam A
-
-VCC → VIN (5V) or 3V3 (module dependent)
-
-GND → GND
-
-OUT → GPIO 4
-
-Beam B
-
-VCC → VIN (5V) or 3V3
-
-GND → GND
-
-OUT → GPIO 16
-
-⚠ Important:
+### Beam B
+- VCC → VIN (5V) or 3V3
+- GND → GND
+- OUT → GPIO 16
 
 Both beams must be aligned and intact during boot.
 
-All grounds must be common.
+---
 
-🔄 Direction Mapping
+## Direction Detection
 
-Current configuration:
+### Beam Sequence Logic
 
-B2A → Enter Zone A
+| Beam Sequence | Direction |
+|---------------|----------|
+| A → B         | A2B      |
+| B → A         | B2A      |
 
-A2B → Exit Zone A
+### Zone Mapping
 
-Mapping can be modified depending on physical installation.
+- B2A → Enter Zone A  
+- A2B → Exit Zone A  
 
-📡 Output Format (NDJSON)
+Mapping may be adjusted depending on installation orientation.
 
-Each event is printed as newline-delimited JSON.
+---
 
-▶ Pass Event
+## Output Format
+
+All output is newline-delimited JSON (NDJSON).
+
+### Pass Event
+
+```json
 {"v":1,"node":"door_01","type":"pass","dir":"B2A","ms":128100,"seq":59}
-Field	Description
-v	Protocol version
-node	Device identifier
-type	Event type
-dir	Direction
-ms	Milliseconds since boot
-seq	Monotonic event counter
+
+Tuning Parameters
+constexpr uint32_t DEBOUNCE_MS = 25;
+constexpr uint32_t SEQ_TIMEOUT_MS = 900;
+constexpr uint32_t RESTORE_STABLE_MS = 120;
 
 Adjust based on:
 
 Beam spacing
 
-Movement speed
+Object speed
 
 Environmental lighting
 
-Object size
+Noise conditions
 
-🛡 Behavior Guarantees
+Behavioral Guarantees
 
-✔ One event per full crossing
-✔ No chatter-induced double triggers
-✔ No repeated triggers while object remains in beam
-✔ Deterministic direction detection
-✔ Occupancy never drops below zero
+Single event per full crossing
 
-🏭 Example Use Cases
+No chatter-induced double triggers
 
-Warehouse dock monitoring
+No repeated triggers while object remains in beam
 
-Staging area flow tracking
+Deterministic direction detection
 
-Forklift traffic counting
+Occupancy value never drops below zero
 
-Entry/exit monitoring
+Limitations
 
-Industrial automation prototypes
+Occupancy resets on reboot (non-persistent state)
 
-⚠ Limitations
+No object identity tracking (RFID/BLE not implemented)
 
-Occupancy count resets on reboot (non-persistent)
+Assumes all traffic passes through the monitored gate
 
-No object identity tracking (RFID/BLE not included)
+Future Extensions
 
-Assumes all traffic passes through monitored gate
+WiFi MQTT transport
 
-🚀 Future Improvements
-
-WiFi + MQTT transport
-
-BLE tag association
+BLE-based object identification
 
 Persistent occupancy storage (NVS)
 
@@ -170,8 +154,8 @@ Multi-node synchronization
 
 OTA firmware updates
 
-Real-time dashboard integration
+Dashboard integration
 
-📜 License
+License
 
-MIT
+MIT License (recommended for open prototype firmware)
