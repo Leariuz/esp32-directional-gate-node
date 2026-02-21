@@ -167,4 +167,4 @@ conditions.
 
 ## License
 
-MIT License (recommended for open prototype firmware)
+MIT License
